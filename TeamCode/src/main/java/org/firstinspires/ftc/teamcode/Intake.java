@@ -10,7 +10,8 @@ public class Intake {
     private Servo armLeft;
     private Servo armRight;
     private Servo wrist;
-    private Servo claw;
+    private Servo rightClaw;
+    private Servo leftClaw;
 
     double armMax = 1;
     double armMin = 0;
@@ -23,13 +24,16 @@ public class Intake {
     double endMod = .1;
     double newPos;
 
+    boolean isClawOpen = true;
+
     WristMode wristMode;
     //set up servos and variables
     Intake(HardwareMap hardwareMap, Telemetry telemetry){
         armLeft = hardwareMap.get(Servo.class, "armLeft");
         armRight = hardwareMap.get(Servo.class, "armRight");
         wrist = hardwareMap.get(Servo.class, "wrist");
-        claw = hardwareMap.get(Servo.class, "claw");
+        rightClaw = hardwareMap.get(Servo.class, "right_claw");
+        leftClaw = hardwareMap.get(Servo.class, "left_claw");
         wristMode = WristMode.MATCHED;
     }
 
@@ -170,27 +174,37 @@ public class Intake {
     }
 
     //this method moves the claw to a position
-    public void runClaw(double pos){
-        claw.setPosition(pos);
+    public void moveLeftClaw(double pos){
+        leftClaw.setPosition(pos);
+    }
+    public void moveRightClaw(double pos){
+        rightClaw.setPosition(pos);
     }
 
     public void openClaw(){
+        isClawOpen = true;
         if(getArmPos()>.5) {
-            runClaw(.15);
+            moveLeftClaw(.6);
+            moveRightClaw(.2);
         }
         else{
-            runClaw(.05);
+            moveLeftClaw(.25);
+            moveRightClaw(.75);
         }
     }
     public void closeClaw(){
-        runClaw(.55);
+        isClawOpen = false;
+        moveLeftClaw(.8);
+        moveRightClaw(.2);
     }
 
     public void toggleClaw(){
-        if (claw.getPosition()>.3){
+        if (!isClawOpen()){
             openClaw();
         }
-        else{closeClaw();}
+        else{
+            closeClaw();
+        }
     }
 
     public void intakeCone() throws InterruptedException{
@@ -210,11 +224,6 @@ public class Intake {
     }
 
     public boolean isClawOpen(){
-        if(claw.getPosition()<.3){
-            return true;
-        }
-        else{
-            return false;
-        }
+        return isClawOpen;
     }
 }
