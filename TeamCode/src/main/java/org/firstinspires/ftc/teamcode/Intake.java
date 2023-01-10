@@ -19,7 +19,7 @@ public class Intake {
     double retracted = 1;
     double extended = armMin;
     double armMid = .6;
-    double sizing = .78;
+    double sizing = .84;
 
     double endMod = .1;
     double newPos;
@@ -60,12 +60,12 @@ public class Intake {
             /*if(newPos>armMid&&claw.getPosition()>0.4) {
                 runWrist(1);
             }
-            else */if(newPos<.35){
-                    runWrist(newPos + endMod);
+            else */if(newPos<.3){
+                    runWrist(newPos + (.3-newPos)/.3*endMod);
                 if(isClawOpen()) {
                 }
                 else{
-                    runWrist(.1);
+                    //runWrist(.1);
                 }
             }
             /*if (Math.abs(newPos-getArmPos())>.5){
@@ -194,7 +194,7 @@ public class Intake {
     }
     public void closeClaw(){
         isClawOpen = false;
-        moveLeftClaw(.8);
+        moveLeftClaw(.75);
         moveRightClaw(.2);
     }
 

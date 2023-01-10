@@ -8,6 +8,7 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.Servo;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
+import static java.lang.Math.*;
 
 public class Outtake {
     private DcMotor slide;
@@ -16,7 +17,9 @@ public class Outtake {
     private Telemetry telemetry;
 
     int max = 1850;
-    int min = 0;
+    int min = 100;
+    int absoluteMin = 0;
+    int target = -1;
     final static double autoSpeed = 1;
 
     enum Height {GROUND, LOW, MEDIUM, HIGH};
@@ -32,6 +35,10 @@ public class Outtake {
 
     //method to input a power to the slide motor
     public void run(double pow){
+        if(pow == 0){
+            return;
+        }
+
         slide.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         slide.setDirection(DcMotor.Direction.FORWARD);
 
@@ -63,10 +70,15 @@ public class Outtake {
             }
         }
         telemetry.addData("Slide Position", pos);
+        target = -1;
     }
 
     //method to input a power to the slide motor
     public void run(double pow, double maxIncrease){
+        if(pow == 0){
+            return;
+        }
+
         slide.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         slide.setDirection(DcMotor.Direction.FORWARD);
 
@@ -98,6 +110,7 @@ public class Outtake {
             }
         }
         telemetry.addData("Slide Position", pos);
+        target = -1;
     }
 
     //methods to tell the motor to run to certain positions. The below are placeholder values.
@@ -170,15 +183,13 @@ public class Outtake {
             telemetry.addData("Slide Position", slide.getCurrentPosition());
             telemetry.update();
         }
-        slide.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        slide.setPower(0);
     }
 
     public boolean isSlideGoingToPosition(){
         return (slide.getMode()==DcMotor.RunMode.RUN_TO_POSITION);
     }
 
-    public double showSlideValue() { return slide.getCurrentPosition(); }
+    public int showSlideValue() { return slide.getCurrentPosition(); }
 
     //this method moves the claw to a position
     public void runClaw(double pos){
@@ -189,7 +200,7 @@ public class Outtake {
         runClaw(0);
     }
     public void closeClaw(){
-        runClaw(.6);
+        runClaw(.55);
     }
 
     public void toggleClaw(){
@@ -197,6 +208,10 @@ public class Outtake {
             openClaw();
         }
         else{closeClaw();}
+    }
+
+    public boolean isClawOpen(){
+        return claw.getPosition()<=.2;
     }
 
     public void outtakeCone(Height height) throws InterruptedException{
@@ -234,5 +249,36 @@ public class Outtake {
 
     public int getMax(){
         return max;
+    }
+
+    public void setTarget(int newTarget){
+        target = newTarget;
+    }
+
+    public boolean update(){
+        int difference;
+        int currentPosition = showSlideValue();
+
+        if(target<absoluteMin||target>max){
+            return false;
+        }
+
+        difference = target - currentPosition;
+        if(abs(difference)<5){
+            return true;
+        }
+
+        if(abs(difference)>75){
+            slide.setPower(difference/abs(difference));
+        }
+        else{
+            slide.setPower(75/abs(difference));
+        }
+
+        return false;
+    }
+
+    public int getTarget(){
+        return target;
     }
 }

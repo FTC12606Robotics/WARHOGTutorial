@@ -13,6 +13,9 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.Func;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 
+import static java.lang.String.*;
+import java.util.ArrayList;
+
 @TeleOp(name="WARHOGTeleOp", group="")
 public class WARHOGTeleOp extends LinearOpMode {
     public WARHOGTeleOp() throws InterruptedException {}
@@ -24,14 +27,20 @@ public class WARHOGTeleOp extends LinearOpMode {
         Drivetrain drivetrain = new Drivetrain(hardwareMap, telemetry);
         Intake intake = new Intake(hardwareMap, telemetry);
         Outtake outtake = new Outtake(hardwareMap, telemetry);
+        WaitForLoops waitForLoops = new WaitForLoops();
 
         //set up variables
-        double joyx, joyy, joyz, gas, basespeed, armpos, wristmod, offset, slideMovement, maxIncrease;
-        boolean autoeject = false;
-        boolean autointake = false;
+        double joyx, joyy, joyz, gas, basespeed, armpos, wristmod, offset, slideMovement,
+                maxIncrease, armposChange, intakeArmSpeed=.03;
+        boolean autoEjectMode = false;
+        boolean autoIntakeMode = false;
         boolean pauseToResetMaxIncrease = false;
         boolean stationary = false;
-        boolean outtakeGround, outtakeLow, outtakeMedium, outtakeHigh, clawtoggle;
+        boolean outtakeGround, outtakeLow, outtakeMedium, outtakeHigh, toggleOuttakeClaw,
+                centricityToggle, resetDriveAngle, autoEjectToggle, autoIntakeToggle,
+                stationaryToggle, toggleIntakeClaw, oneDriver = false, oneDriverToggle,
+                extendIntakeArm = false, retractIntakeArm = false, uprightIntakeArm = false, sizingIntakeArm = false,
+                intakeCone=false, wristFixed = false, wristFixedToggle = false, isOuttakeAtTarget;
 
         offset = 0;
         Drivetrain.Centricity centricity = Drivetrain.Centricity.FIELD;
@@ -74,6 +83,9 @@ public class WARHOGTeleOp extends LinearOpMode {
         }
 
         drivetrain.setAngleOffset(offset);
+        oneDriver = false;
+        autoEjectMode = false;
+        autoIntakeMode = false;
 
         while(opModeIsActive()){
             //set up inputs
@@ -88,8 +100,166 @@ public class WARHOGTeleOp extends LinearOpMode {
                 // Swallow the possible exception, it should not happen as
                 // currentGamepad1/2 are being copied from valid Gamepads.
             }
-
             telemetry.addData("angle", drivetrain.getIMUData()/PI*180);
+
+            isOuttakeAtTarget = outtake.update();
+
+    //set up inputs
+
+            //inputs that toggle the modes
+            centricityToggle = currentGamepad1.left_bumper && !previousGamepad1.left_bumper; //change whether the drive is bot or field centric
+            autoEjectToggle = currentGamepad2.start && !previousGamepad2.start;
+            autoIntakeToggle = currentGamepad2.back && !previousGamepad2.back;
+            stationaryToggle = currentGamepad1.back && !previousGamepad1.back;
+            oneDriverToggle = currentGamepad1.start && !previousGamepad1.start;
+            wristFixedToggle = currentGamepad2.left_trigger>.2 && !(previousGamepad2.left_trigger>.2);
+
+            //change the modes based on the inputs
+            if(wristFixedToggle) {
+                if(wristFixed) {
+                    wristFixed = false;
+                }
+                else{
+                    wristFixed = true;
+                }
+            }
+            if(oneDriverToggle){
+                if(oneDriver){
+                    oneDriver=false;
+                }
+                else{
+                    oneDriver=true;
+                }
+            }
+            if(stationaryToggle){
+                if(stationary){
+                    stationary=false;
+                }
+                else{
+                    stationary=true;
+                }
+            }
+            if(autoEjectToggle){
+                if(autoEjectMode){
+                    autoEjectMode=false;
+                }
+                else{
+                    autoEjectMode=true;
+                }
+            }
+            if(autoIntakeToggle){
+                if(autoIntakeMode){
+                    autoIntakeMode=false;
+                }
+                else{
+                    autoIntakeMode=true;
+                }
+            }
+
+
+
+            resetDriveAngle = currentGamepad1.dpad_up; //use when the robot is facing away from you
+
+
+            telemetry.addData("Stationary", stationary);
+            //set up operator commands based on whether oneDriver mode is on
+            if(oneDriver){
+                outtakeGround = false;
+                outtakeLow = false;
+                outtakeMedium = false;
+                outtakeHigh = false;
+                maxIncrease = 0;
+                //if outtake claw is closed, or if slides are up, you control the outtake
+                if(!outtake.isClawOpen() || outtake.showSlideValue()>0){
+                    uprightIntakeArm = true;
+                    if(currentGamepad1.left_bumper){
+                        slideMovement = 1;
+                    }
+                    else if(currentGamepad1.left_trigger>.2){
+                        slideMovement = -1;
+                    }
+                    else{
+                        slideMovement = 0;
+                    }
+                    //toggle outtake claw
+                    toggleOuttakeClaw = currentGamepad1.right_bumper && !previousGamepad1.right_bumper;
+
+                    armposChange=0;
+                    toggleIntakeClaw=false;
+                }
+                else{
+                    uprightIntakeArm = false;
+                    //left shoulder buttons always control arm if outtake claw is closed and down
+                    if(currentGamepad1.left_bumper){
+                        armposChange = -intakeArmSpeed;
+                    }
+                    else if(currentGamepad1.left_trigger>.2){
+                        armposChange = intakeArmSpeed;
+                    }
+                    else{
+                        armposChange = 0;
+                    }
+                    //if intake claw is closed, claw button controls intake claw
+                    if(!intake.isClawOpen()){
+                        toggleIntakeClaw = currentGamepad1.right_bumper && !previousGamepad1.right_bumper;
+                        toggleOuttakeClaw = false;
+                    }
+                    else{
+                        if(intake.getArmPos()>.4){
+                            toggleOuttakeClaw = currentGamepad1.right_bumper && !previousGamepad1.right_bumper;
+                            toggleIntakeClaw = false;
+                        }
+                        else{
+                            toggleIntakeClaw = currentGamepad1.right_bumper && !previousGamepad1.right_bumper;
+                            toggleOuttakeClaw = false;
+                        }
+                    }
+
+                    slideMovement = 0;
+                }
+            }
+            else {
+                //code to switch between field centric and bot centric drive
+                if(centricityToggle){
+                    if(centricity==Drivetrain.Centricity.BOT){centricity = Drivetrain.Centricity.FIELD;}
+                    else{centricity = Drivetrain.Centricity.BOT;}
+                }
+
+                armposChange = currentGamepad2.left_stick_y*intakeArmSpeed;
+                toggleIntakeClaw = currentGamepad2.left_bumper && !previousGamepad2.left_bumper;
+                if(autoIntakeMode){
+                    intakeCone = currentGamepad2.dpad_down;
+                    if(toggleIntakeClaw){
+                        waitForLoops.addWaitEvent("Raise Intake Arm", 20);
+                    }
+                }
+                else {
+                    retractIntakeArm = currentGamepad2.dpad_down;
+                }
+                uprightIntakeArm = currentGamepad2.dpad_right;
+                sizingIntakeArm = currentGamepad2.dpad_left;
+                extendIntakeArm = currentGamepad2.dpad_up;
+
+                //set up slide commands based on whether stationary mode is on
+                if (!stationary) {
+                    slideMovement = -currentGamepad2.right_stick_y;
+                    outtakeGround = currentGamepad2.a;
+                    outtakeLow = currentGamepad2.x;
+                    outtakeMedium = currentGamepad2.b;
+                    outtakeHigh = currentGamepad2.y;
+                    toggleOuttakeClaw = currentGamepad2.right_bumper && !previousGamepad2.right_bumper;
+                    maxIncrease = currentGamepad2.right_trigger * 100;
+                } else {
+                    slideMovement = -currentGamepad1.right_stick_y;
+                    outtakeGround = currentGamepad1.a;
+                    outtakeLow = currentGamepad1.x;
+                    outtakeMedium = currentGamepad1.b;
+                    outtakeHigh = currentGamepad1.y;
+                    toggleOuttakeClaw = currentGamepad1.right_bumper && !previousGamepad1.right_bumper;
+                    maxIncrease = currentGamepad1.left_trigger * 100;
+                }
+            }
+
 
             //set up vectors
             joyx = currentGamepad1.left_stick_x;
@@ -103,70 +273,62 @@ public class WARHOGTeleOp extends LinearOpMode {
             telemetry.addData("z", joyz);
 
 
+
+            //turn off wrist fixed if arm is over a certain threshold
+            if(toggleIntakeClaw&&intake.isClawOpen()&&intake.getArmPos()>.01){
+                wristFixed=true;
+            }
+            if(toggleIntakeClaw&&!intake.isClawOpen()){
+                wristFixed=false;
+            }
+            if(intake.getArmPos()>.95){
+                wristFixed=false;
+            }
+
+            if(wristFixed){
+                intake.changeWristMode(Intake.WristMode.INDEPENDENT);
+            }
+            else{
+                intake.changeWristMode(Intake.WristMode.MATCHED);
+            }
+
+
+
+
             //set and print motor powers
             double[] motorPowers = drivetrain.driveVectors(centricity, joyx, joyy, joyz, basespeed+gas);
             for (double line:motorPowers){
                 telemetry.addLine( Double.toString(line) );
             }
 
-            //code to switch between field centric and bot centric drive
-            if(currentGamepad1.left_bumper && !previousGamepad1.left_bumper){
-                if(centricity==Drivetrain.Centricity.BOT){centricity = Drivetrain.Centricity.FIELD;}
-                else{centricity = Drivetrain.Centricity.BOT;}
-            }
-
             //reset the angle
-            if(currentGamepad1.dpad_up){
+            if(resetDriveAngle){
                 drivetrain.resetAngle();
             }
 
-
-
-            //switch between autointake and autoeject
-            if(currentGamepad2.start && !previousGamepad2.start){
-                if(autoeject==true){
-                    autoeject=false;
-                }
-                else{
-                    autoeject=true;
-                }
-            }
-            if(currentGamepad2.back && !previousGamepad2.back){
-                if(autointake==true){
-                    autointake=false;
-                }
-                else{
-                    autointake=true;
-                }
-            }
-
             //move arm
-            armpos += currentGamepad2.left_stick_y*.03;
+            armpos += armposChange;
             if(armpos<0){armpos=0;}
             if(armpos>1){armpos=1;}
             //defined positions
-            if(autointake){
-                if(currentGamepad2.dpad_down){
-                    intake.intakeCone();
-                }
+            if(retractIntakeArm){
+                armpos = intake.runArm(Intake.Height.RETRACTED);
             }
-            else{
-                if(currentGamepad2.dpad_down){
-                    armpos = intake.runArm(Intake.Height.RETRACTED);
-                }
-            }
-            if(currentGamepad2.dpad_up){
+            if(extendIntakeArm){
                 armpos = intake.runArm(Intake.Height.EXTENDED);
             }
-            if(currentGamepad2.dpad_left){
+            if(uprightIntakeArm){
                 armpos = intake.runArm(Intake.Height.UPRIGHT);
             }
-            if(currentGamepad2.dpad_right){
+            if(sizingIntakeArm){
                 armpos = intake.runArm(Intake.Height.SIZING);
+            }
+            if(intakeCone){
+                intake.intakeCone();
             }
 
             //move the arm, modifying the wrist's position if right trigger is pressed
-            wristmod = (currentGamepad2.left_trigger-.2)*.625;
+            wristmod = 0; //(currentGamepad2.left_trigger-.2)*.625;
             if(wristmod>0){
                 intake.runArm(armpos, wristmod);
                 telemetry.addData("Wrist Mod", wristmod);
@@ -177,51 +339,24 @@ public class WARHOGTeleOp extends LinearOpMode {
             telemetry.addData("Arm Position", armpos);
 
             //open/close the claw
-            if(currentGamepad2.left_bumper && !previousGamepad2.left_bumper){
+            if(toggleIntakeClaw){
                 intake.toggleClaw();
             }
 
 
-            //change whether stationary mode is on
-            if(currentGamepad1.back && !previousGamepad1.back){
-                if(stationary){
-                    stationary=false;
-                }
-                else{
-                    stationary=true;
-                }
-            }
 
-            telemetry.addData("Stationary", stationary);
-
-            //set up slide commands based on whether stationary mode is on
-            if(!stationary){
-                slideMovement = -currentGamepad2.right_stick_y;
-                outtakeGround = currentGamepad2.a;
-                outtakeLow = currentGamepad2.x;
-                outtakeMedium = currentGamepad2.b;
-                outtakeHigh = currentGamepad2.y;
-                clawtoggle = currentGamepad2.right_bumper && !previousGamepad2.right_bumper;
-                maxIncrease = currentGamepad2.right_trigger*100;
-            }
-            else{
-                slideMovement = -currentGamepad1.right_stick_y;
-                outtakeGround = currentGamepad1.a;
-                outtakeLow = currentGamepad1.x;
-                outtakeMedium = currentGamepad1.b;
-                outtakeHigh = currentGamepad1.y;
-                clawtoggle = currentGamepad1.right_bumper && !previousGamepad1.right_bumper;
-                maxIncrease = currentGamepad1.left_trigger*100;
-            }
 
             //open/close the outtake claw
-            if(clawtoggle){
+            if(toggleOuttakeClaw){
                 outtake.toggleClaw();
+                if(!stationary) {
+                    intake.runArm(Intake.Height.UPRIGHT);
+                }
                 telemetry.addLine("Toggle OuttakeClaw");
             }
 
             //increase slide maximum
-            if(outtake.showSlideValue()>1600 && currentGamepad2.left_trigger>0) {
+            if(outtake.showSlideValue()>1600 && maxIncrease>0) {
                 if (!pauseToResetMaxIncrease) {
                     outtake.increaseMax(currentGamepad2.right_trigger * 50, currentGamepad2.right_stick_button && !previousGamepad2.right_stick_button);
                     if (currentGamepad2.right_stick_button && !previousGamepad2.right_stick_button) {
@@ -259,11 +394,49 @@ public class WARHOGTeleOp extends LinearOpMode {
 
             telemetry.addData("slide max", outtake.getMax());
 
+            if(waitForLoops.checkEvent("Raise Intake Arm")){
+                intake.runArm(Intake.Height.SIZING);
+                outtake.setTarget(0);
+            }
+            if(isOuttakeAtTarget&&outtake.getTarget()==0){
+                outtake.closeClaw();
+            }
+
             //end step
             telemetry.update();
-
-
+            waitForLoops.update();
         }
 
+    }
+
+    private class WaitForLoops{
+        int loopsSoFar = 0;
+
+        ArrayList<String> names = new ArrayList<String>();
+        ArrayList<Integer> waitTimes = new ArrayList<Integer>();
+
+        public void update(){
+            loopsSoFar+=1;
+        }
+
+        public void addWaitEvent(String name, int loops){
+            if(names.contains(name)){
+                return;
+            }
+            names.add(name);
+            waitTimes.add(loopsSoFar+loops);
+        }
+
+        public boolean checkEvent(String name){
+            if(!names.contains(name)){
+                return false;
+            }
+            boolean isEventTriggered = waitTimes.get(names.indexOf(name)) >= loopsSoFar;
+            if(isEventTriggered){
+                waitTimes.remove(names.indexOf(name));
+                names.remove(names.indexOf(name));
+            }
+            return isEventTriggered;
+        }
     }
 }

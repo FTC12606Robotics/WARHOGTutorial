@@ -240,7 +240,7 @@ public class WARHOGAuto extends LinearOpMode {
         drivetrain.MoveForDis(-7.5, speed);
         if(cycles>-1) {
             drivetrain.rotateToPosition(-45 * posMod, speed - .25);
-            drivetrain.MoveForDis(-1.5, speed);
+            drivetrain.MoveForDis(-.75, speed);
             telemetry.addLine("just before slides");
             telemetry.update();
             outtake.setHeight(Outtake.Height.HIGH);
@@ -249,6 +249,7 @@ public class WARHOGAuto extends LinearOpMode {
             outtake.setHeight(1500);
             outtake.openClaw();
             outtake.setHeight(Outtake.Height.GROUND);
+            //drivetrain.MoveForDis(-.75, speed);
 
             // turn to cone stack
             //drivetrain.MoveForDis(1, speed);
@@ -259,40 +260,42 @@ public class WARHOGAuto extends LinearOpMode {
             cycles = 0;
         }
 
+
         for(int i = 0; i < cycles; i++) {
             //drivetrain.RotateForDegree(-45 * posMod, speed);
-            drivetrain.rotateToPosition(-90 * posMod, speed-.35);
-            intake.runArm(.2-.04*i);
+            drivetrain.rotateToPosition(-85 * posMod, speed-.45);
+            intake.runArm(.25-.05*i);
             sleep(500);
 
             // move backward toward cone stack
-            drivetrain.MoveForDis(-15, speed-.2);
+            drivetrain.MoveForDis(-12, speed*.75);
 
             // take another cone
             intake.closeClaw();
-            sleep(1000);
+            intake.changeWristMode(Intake.WristMode.INDEPENDENT);
+            sleep(500);
             intake.runArm(.4);
             sleep(1000);
+            intake.changeWristMode(Intake.WristMode.MATCHED);
             intake.runArm(Intake.Height.RETRACTED);
 
             // turn back
-            drivetrain.MoveForDis(15, speed);
+            drivetrain.MoveForDis(12, speed);
             intake.openClaw();
             //sleep(500);
             //drivetrain.RotateForDegree(45 * posMod, speed);
-            drivetrain.rotateToPosition(-45 * posMod, speed-.25);
+            drivetrain.rotateToPosition(-45 * posMod, speed*.75);
             intake.runArm(Intake.Height.UPRIGHT);
             outtake.closeClaw();
-            drivetrain.MoveForDis(-1, 0.2);
+            //drivetrain.MoveForDis(.75, 0.2);
+            sleep(150);
             outtake.setHeight(Outtake.Height.HIGH);
             telemetry.addLine("height added");
             telemetry.update();
             outtake.setHeight(1500);
             outtake.openClaw();
             outtake.setHeight(Outtake.Height.GROUND);
-
-            // turn to cone stack
-            drivetrain.MoveForDis(1, speed);
+            //drivetrain.MoveForDis(-.75, speed);
         }
         telemetry.addLine("Stage 2 complete");
         telemetry.update();
@@ -308,7 +311,7 @@ public class WARHOGAuto extends LinearOpMode {
             drivetrain.MoveForDis(-24, speed);
 
         }else{
-            drivetrain.MoveForDis(24, speed);
+            drivetrain.MoveForDis(22, speed);
         }
 
         //drivetrain.RotateForDegree(90*posMod, speed);
