@@ -21,7 +21,7 @@ public class WARHOGAuto extends LinearOpMode {
     private enum StartPosColor {
         RED, BLUE
     };
-    private StartPosPosition startPosPosition = StartPosPosition.LEFT;
+    private StartPosPosition startPosPosition = StartPosPosition.RIGHT;
     private enum StartPosPosition{
         LEFT, RIGHT
     };
@@ -38,9 +38,9 @@ public class WARHOGAuto extends LinearOpMode {
 
     int colorMod = 0;
     int posMod = 0;
-    int cycles = 0;
+    int cycles = 1;
 
-    double speed = .85;
+    double speed = .65;
 
     //this stuff does not need to be changed
     // Lens intrinsics
@@ -96,7 +96,7 @@ public class WARHOGAuto extends LinearOpMode {
 
         //init loop
         while (!isStarted() && !isStopRequested()) {
-            intake.runArm(Intake.Height.SIZING);
+            intake.runArm(Intake.Height.STARTSIZING);
             //set up inputs - have previous so that you can check rising edge
             try {
                 previousGamepad1.copy(currentGamepad1);
@@ -215,6 +215,8 @@ public class WARHOGAuto extends LinearOpMode {
 
         // start command just came in
 
+        intake.runArm(Intake.Height.DRIVESIZING);
+
         //set modifier values
         switch (startPosColor){
             case RED:
@@ -239,12 +241,13 @@ public class WARHOGAuto extends LinearOpMode {
         drivetrain.MoveForDis(60, speed);
         drivetrain.MoveForDis(-7.5, speed);
         if(cycles>-1) {
-            drivetrain.rotateToPosition(-45 * posMod, speed - .25);
+            drivetrain.rotateToPosition(-43 * posMod - (posMod+1), speed - .25);
             drivetrain.MoveForDis(-.75, speed);
             telemetry.addLine("just before slides");
             telemetry.update();
             outtake.setHeight(Outtake.Height.HIGH);
             telemetry.addLine("height added");
+            sleep(250);
             telemetry.update();
             outtake.setHeight(1500);
             outtake.openClaw();
@@ -263,12 +266,12 @@ public class WARHOGAuto extends LinearOpMode {
 
         for(int i = 0; i < cycles; i++) {
             //drivetrain.RotateForDegree(-45 * posMod, speed);
-            drivetrain.rotateToPosition(-85 * posMod, speed-.45);
-            intake.runArm(.25-.05*i);
+            drivetrain.rotateToPosition(-86 * posMod-2*(posMod-1), speed-.45-.25*(posMod-1));
+            intake.runArm(.16-.0325*i);
             sleep(500);
 
             // move backward toward cone stack
-            drivetrain.MoveForDis(-12, speed*.75);
+            drivetrain.MoveForDis(-11.5, speed*.75);
 
             // take another cone
             intake.closeClaw();
@@ -280,15 +283,19 @@ public class WARHOGAuto extends LinearOpMode {
             intake.runArm(Intake.Height.RETRACTED);
 
             // turn back
-            drivetrain.MoveForDis(12, speed);
+            drivetrain.MoveForDis(11.5, speed);
+            sleep(250);
             intake.openClaw();
-            //sleep(500);
+            sleep(500);
+            outtake.closeClaw();
             //drivetrain.RotateForDegree(45 * posMod, speed);
             drivetrain.rotateToPosition(-45 * posMod, speed*.75);
-            intake.runArm(Intake.Height.UPRIGHT);
+            intake.runArm(Intake.Height.DRIVESIZING);
+            outtake.openClaw();
+            sleep(250);
             outtake.closeClaw();
             //drivetrain.MoveForDis(.75, 0.2);
-            sleep(150);
+            sleep(250);
             outtake.setHeight(Outtake.Height.HIGH);
             telemetry.addLine("height added");
             telemetry.update();
@@ -301,24 +308,25 @@ public class WARHOGAuto extends LinearOpMode {
         telemetry.update();
 
         // park
-        intake.runArm(Intake.Height.SIZING);
+        intake.runArm(Intake.Height.RETRACTED);
         //drivetrain.RotateForDegree(-45 * posMod, speed);
-        drivetrain.rotateToPosition(-90 * posMod, speed-.25);
         if(tagOfInterest == null || tagOfInterest.id == MIDDLE){
 
         }else if((tagOfInterest.id-2)*posMod==1){
-
-            drivetrain.MoveForDis(-24, speed);
+            drivetrain.rotateToPosition(-90 * posMod, speed-.25);
+            drivetrain.MoveForDis(-21, speed);
 
         }else{
+            drivetrain.rotateToPosition(-90 * posMod, speed-.25);
             drivetrain.MoveForDis(22, speed);
         }
 
         //drivetrain.RotateForDegree(90*posMod, speed);
-        if(tagOfInterest==null || (tagOfInterest.id-2)*posMod==-1 || tagOfInterest.id==MIDDLE) {
-            drivetrain.rotateToPosition(0, speed-.25);
-            drivetrain.MoveForDis(-12, speed);
+        drivetrain.rotateToPosition(0, speed-.25);
+        if(tagOfInterest != null && (tagOfInterest.id-2)*posMod==1) {
+            drivetrain.SideMoveForDis(2.5*posMod, speed);
         }
+        drivetrain.MoveForDis(-12, speed);
         intake.runArm(Intake.Height.RETRACTED);
         telemetry.addLine("Stage 3 complete");
         telemetry.update();

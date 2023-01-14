@@ -31,16 +31,18 @@ public class WARHOGTeleOp extends LinearOpMode {
 
         //set up variables
         double joyx, joyy, joyz, gas, basespeed, armpos, wristmod, offset, slideMovement,
-                maxIncrease, armposChange, intakeArmSpeed=.03;
+                maxIncrease, armposChange, intakeArmSpeed=.03, modAngle;
         boolean autoEjectMode = false;
         boolean autoIntakeMode = false;
         boolean pauseToResetMaxIncrease = false;
         boolean stationary = false;
-        boolean outtakeGround, outtakeLow, outtakeMedium, outtakeHigh, toggleOuttakeClaw,
+        boolean outtakeGround, outtakeLow, outtakeMedium, outtakeHigh, toggleOuttakeClaw = false,
                 centricityToggle, resetDriveAngle, autoEjectToggle, autoIntakeToggle,
                 stationaryToggle, toggleIntakeClaw, oneDriver = false, oneDriverToggle,
                 extendIntakeArm = false, retractIntakeArm = false, uprightIntakeArm = false, sizingIntakeArm = false,
-                intakeCone=false, wristFixed = false, wristFixedToggle = false, isOuttakeAtTarget;
+                intakeCone=false, wristFixed = false, wristFixedToggle = false, isOuttakeAtTarget,
+                outtakeClawMoveIntake = false;
+        int leftConeStack = 5, rightConeStack = 5;
 
         offset = 0;
         Drivetrain.Centricity centricity = Drivetrain.Centricity.FIELD;
@@ -107,7 +109,7 @@ public class WARHOGTeleOp extends LinearOpMode {
     //set up inputs
 
             //inputs that toggle the modes
-            centricityToggle = currentGamepad1.left_bumper && !previousGamepad1.left_bumper; //change whether the drive is bot or field centric
+            centricityToggle = currentGamepad1.dpad_down && !previousGamepad1.dpad_down; //change whether the drive is bot or field centric
             autoEjectToggle = currentGamepad2.start && !previousGamepad2.start;
             autoIntakeToggle = currentGamepad2.back && !previousGamepad2.back;
             stationaryToggle = currentGamepad1.back && !previousGamepad1.back;
@@ -171,7 +173,7 @@ public class WARHOGTeleOp extends LinearOpMode {
                 maxIncrease = 0;
                 //if outtake claw is closed, or if slides are up, you control the outtake
                 if(!outtake.isClawOpen() || outtake.showSlideValue()>0){
-                    uprightIntakeArm = true;
+                    sizingIntakeArm = true;
                     if(currentGamepad1.left_bumper){
                         slideMovement = 1;
                     }
@@ -188,7 +190,7 @@ public class WARHOGTeleOp extends LinearOpMode {
                     toggleIntakeClaw=false;
                 }
                 else{
-                    uprightIntakeArm = false;
+                    sizingIntakeArm = false;
                     //left shoulder buttons always control arm if outtake claw is closed and down
                     if(currentGamepad1.left_bumper){
                         armposChange = -intakeArmSpeed;
@@ -229,16 +231,16 @@ public class WARHOGTeleOp extends LinearOpMode {
                 toggleIntakeClaw = currentGamepad2.left_bumper && !previousGamepad2.left_bumper;
                 if(autoIntakeMode){
                     intakeCone = currentGamepad2.dpad_down;
-                    if(toggleIntakeClaw){
-                        waitForLoops.addWaitEvent("Raise Intake Arm", 20);
-                    }
+                    //if(toggleIntakeClaw){
+                        //waitForLoops.addWaitEvent("Raise Intake Arm", 20);
+                    //}
                 }
                 else {
                     retractIntakeArm = currentGamepad2.dpad_down;
                 }
-                uprightIntakeArm = currentGamepad2.dpad_right;
-                sizingIntakeArm = currentGamepad2.dpad_left;
-                extendIntakeArm = currentGamepad2.dpad_up;
+                sizingIntakeArm = currentGamepad2.dpad_right || (outtakeClawMoveIntake&&intake.getArmPos()>.7);
+                uprightIntakeArm = currentGamepad2.dpad_left;
+                extendIntakeArm = currentGamepad2.dpad_up && !previousGamepad2.dpad_up;
 
                 //set up slide commands based on whether stationary mode is on
                 if (!stationary) {
@@ -247,15 +249,26 @@ public class WARHOGTeleOp extends LinearOpMode {
                     outtakeLow = currentGamepad2.x;
                     outtakeMedium = currentGamepad2.b;
                     outtakeHigh = currentGamepad2.y;
-                    toggleOuttakeClaw = currentGamepad2.right_bumper && !previousGamepad2.right_bumper;
+                    toggleOuttakeClaw = (currentGamepad2.right_bumper && !previousGamepad2.right_bumper) || (currentGamepad2.right_trigger>.2 && !(previousGamepad2.right_trigger>.2));
+                    outtakeClawMoveIntake = currentGamepad2.right_bumper && !previousGamepad2.right_bumper;
                     maxIncrease = currentGamepad2.right_trigger * 100;
                 } else {
-                    slideMovement = -currentGamepad1.right_stick_y;
+                    if(currentGamepad1.left_bumper){
+                        slideMovement = 1;
+                    }
+                    else if(currentGamepad1.left_trigger>.2){
+                        slideMovement = -1;
+                    }
+                    else{
+                        slideMovement = 0;
+                    }
+                    telemetry.addData("gamepad 1 left trigger", currentGamepad1.left_trigger);
                     outtakeGround = currentGamepad1.a;
                     outtakeLow = currentGamepad1.x;
                     outtakeMedium = currentGamepad1.b;
                     outtakeHigh = currentGamepad1.y;
-                    toggleOuttakeClaw = currentGamepad1.right_bumper && !previousGamepad1.right_bumper;
+                    toggleOuttakeClaw = (currentGamepad1.right_bumper && !previousGamepad1.right_bumper) || (currentGamepad1.right_trigger>.2 && !(previousGamepad1.right_trigger>.2));
+                    outtakeClawMoveIntake = currentGamepad1.right_bumper && !previousGamepad1.right_bumper;
                     maxIncrease = currentGamepad1.left_trigger * 100;
                 }
             }
@@ -314,14 +327,33 @@ public class WARHOGTeleOp extends LinearOpMode {
             if(retractIntakeArm){
                 armpos = intake.runArm(Intake.Height.RETRACTED);
             }
+            modAngle = (drivetrain.getIMUData()/PI*180)%360;
+            telemetry.addData("mod angle", modAngle);
+            telemetry.addData("left cone stack", leftConeStack);
+            telemetry.addData("right cone stack", rightConeStack);
             if(extendIntakeArm){
-                armpos = intake.runArm(Intake.Height.EXTENDED);
+                if(modAngle>45 && modAngle<135){
+                    armpos = .15-.0375*(5-leftConeStack);
+                    leftConeStack -= 1;
+                    if(leftConeStack<1){
+                        leftConeStack = 5;
+                    }
+                }
+                else if(modAngle<-45 && modAngle>-135){
+                    armpos = .15-.0375*(5-rightConeStack);
+                    rightConeStack -= 1;
+                    if(rightConeStack<1){
+                        rightConeStack = 5;
+                    }
+                }else {
+                    armpos = intake.runArm(Intake.Height.EXTENDED);
+                }
             }
             if(uprightIntakeArm){
                 armpos = intake.runArm(Intake.Height.UPRIGHT);
             }
             if(sizingIntakeArm){
-                armpos = intake.runArm(Intake.Height.SIZING);
+                armpos = intake.runArm(Intake.Height.DRIVESIZING);
             }
             if(intakeCone){
                 intake.intakeCone();
@@ -349,9 +381,9 @@ public class WARHOGTeleOp extends LinearOpMode {
             //open/close the outtake claw
             if(toggleOuttakeClaw){
                 outtake.toggleClaw();
-                if(!stationary) {
-                    intake.runArm(Intake.Height.UPRIGHT);
-                }
+                /*if(!stationary) {
+                    armpos = intake.runArm(Intake.Height.UPRIGHT);
+                }*/
                 telemetry.addLine("Toggle OuttakeClaw");
             }
 
@@ -371,7 +403,7 @@ public class WARHOGTeleOp extends LinearOpMode {
 
             //move the outtake slides up and down
             if(!outtake.isSlideGoingToPosition()) {
-                outtake.run(slideMovement, maxIncrease);
+                outtake.run(slideMovement);
                 telemetry.addLine("moving using stick");
             }
 
@@ -395,7 +427,7 @@ public class WARHOGTeleOp extends LinearOpMode {
             telemetry.addData("slide max", outtake.getMax());
 
             if(waitForLoops.checkEvent("Raise Intake Arm")){
-                intake.runArm(Intake.Height.SIZING);
+                intake.runArm(Intake.Height.DRIVESIZING);
                 outtake.setTarget(0);
             }
             if(isOuttakeAtTarget&&outtake.getTarget()==0){

@@ -19,7 +19,8 @@ public class Intake {
     double retracted = 1;
     double extended = armMin;
     double armMid = .6;
-    double sizing = .84;
+    double driveSizing = .8;
+    double startSizing = .9;
 
     double endMod = .1;
     double newPos;
@@ -38,7 +39,7 @@ public class Intake {
     }
 
     public enum WristMode{INDEPENDENT, MATCHED, SIDEWAYS}
-    public enum Height{EXTENDED, UPRIGHT, RETRACTED, SIZING}
+    public enum Height{EXTENDED, UPRIGHT, RETRACTED, DRIVESIZING, STARTSIZING}
 
     //moves arm to a position
     public void runArm(double pos) throws InterruptedException{
@@ -150,9 +151,12 @@ public class Intake {
             case RETRACTED:
                 runArm(retracted);
                 return retracted;
-            case SIZING:
-                runArm(sizing);
-                return sizing;
+            case DRIVESIZING:
+                runArm(driveSizing);
+                return driveSizing;
+            case STARTSIZING:
+                runArm(startSizing);
+                return startSizing;
             default:
                 break;
         }

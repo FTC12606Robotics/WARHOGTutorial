@@ -35,9 +35,6 @@ public class Outtake {
 
     //method to input a power to the slide motor
     public void run(double pow){
-        if(pow == 0){
-            return;
-        }
 
         slide.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         slide.setDirection(DcMotor.Direction.FORWARD);
@@ -75,9 +72,6 @@ public class Outtake {
 
     //method to input a power to the slide motor
     public void run(double pow, double maxIncrease){
-        if(pow == 0){
-            return;
-        }
 
         slide.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         slide.setDirection(DcMotor.Direction.FORWARD);
@@ -200,7 +194,7 @@ public class Outtake {
         runClaw(0);
     }
     public void closeClaw(){
-        runClaw(.55);
+        runClaw(.53);
     }
 
     public void toggleClaw(){
@@ -253,6 +247,13 @@ public class Outtake {
 
     public void setTarget(int newTarget){
         target = newTarget;
+    }
+
+    public boolean isSlideOnTarget(){
+        if(target<absoluteMin||target>max){
+            return true;
+        }
+        return (abs(target - showSlideValue())<5);
     }
 
     public boolean update(){
