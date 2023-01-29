@@ -13,7 +13,7 @@ public class Intake {
     private Servo rightClaw;
     private Servo leftClaw;
 
-    double armMax = 1;
+    double armMax = .95;
     double armMin = 0;
 
     double retracted = 1;

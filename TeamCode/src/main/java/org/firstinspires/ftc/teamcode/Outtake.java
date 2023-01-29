@@ -26,7 +26,7 @@ public class Outtake {
 
     Outtake(HardwareMap hardwareMap, Telemetry telemetry){
         slide = hardwareMap.get(DcMotor.class, "slide");
-        slide.setDirection(DcMotorSimple.Direction.FORWARD);
+        slide.setDirection(DcMotorSimple.Direction.REVERSE);
         slide.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         slide.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         claw = hardwareMap.get(Servo.class, "outtakeclaw");
@@ -37,7 +37,6 @@ public class Outtake {
     public void run(double pow){
 
         slide.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        slide.setDirection(DcMotor.Direction.FORWARD);
 
         int pos = slide.getCurrentPosition();
         if (pos<=max && pos>=min){
@@ -74,7 +73,6 @@ public class Outtake {
     public void run(double pow, double maxIncrease){
 
         slide.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        slide.setDirection(DcMotor.Direction.FORWARD);
 
         int pos = slide.getCurrentPosition();
         if (pos<=max && pos>=min){
@@ -127,7 +125,6 @@ public class Outtake {
         }
 
         slide.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        slide.setDirection(DcMotor.Direction.FORWARD);
         slide.setPower(autoSpeed);
         while(slide.isBusy()) {
             telemetry.addData("Slide Position", slide.getCurrentPosition());
@@ -155,7 +152,6 @@ public class Outtake {
         }
 
         slide.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        slide.setDirection(DcMotor.Direction.FORWARD);
         slide.setPower(autoSpeed);/*
         while(slide.isBusy()) {
             telemetry.addData("Slide Position", slide.getCurrentPosition());
@@ -171,7 +167,6 @@ public class Outtake {
         telemetry.addLine("setting height");
 
         slide.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        slide.setDirection(DcMotor.Direction.FORWARD);
         slide.setPower(autoSpeed);
         while(slide.isBusy()) {
             telemetry.addData("Slide Position", slide.getCurrentPosition());
@@ -269,11 +264,17 @@ public class Outtake {
             return true;
         }
 
+
+        telemetry.addData("Target", target);
+        telemetry.addData("current position", currentPosition);
+
+        telemetry.addData("theoretical motor power", difference/abs(difference));
         if(abs(difference)>75){
-            slide.setPower(difference/abs(difference));
+            run(difference/abs(difference));
+            telemetry.addLine("here");
         }
         else{
-            slide.setPower(75/abs(difference));
+            run(75/abs(difference));
         }
 
         return false;
